@@ -4,44 +4,56 @@ import 'package:votaciones_app/services/firestore_services.dart';
 import '../services/firestore_service.dart';
 
 class VotacionesPage extends StatelessWidget {
-  final FirestoreService firestoreService = FirestoreService();
+  final FirestoreService _firestore = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('VOTACIONES'),
+        title: const Text('VOTACIONES'),
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: firestoreService.getPartidos(),
+        stream: _firestore.getPartidos(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          return ListView(
-            children: snapshot.data!.docs.map((doc) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No hay datos'));
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              final votos = data['votos'];
-              final nombre = data['nombre'];
+
+              int votos = data['votos'] ?? 0;
+              String nombre = data['nombre'] ?? 'Sin nombre';
 
               return Card(
-                margin: EdgeInsets.all(10),
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 child: Padding(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      Icon(Icons.star_border, size: 50),
-                      SizedBox(width: 10),
+                      const Icon(Icons.star_border, size: 45),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(nombre,
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
+                            Text(
+                              nombre,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
                             Text('Votos: $votos'),
                           ],
                         ),
@@ -49,20 +61,21 @@ class VotacionesPage extends StatelessWidget {
                       Column(
                         children: [
                           IconButton(
-                            icon: Icon(Icons.arrow_upward),
+                            icon: const Icon(Icons.arrow_upward),
                             onPressed: () {
-                              firestoreService.sumarVoto(doc.id, votos);
+                              _firestore.sumarVoto(doc.id, votos);
                             },
                           ),
                           Text(
                             votos.toString(),
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
                           ),
                           IconButton(
-                            icon: Icon(Icons.arrow_downward),
+                            icon: const Icon(Icons.arrow_downward),
                             onPressed: () {
-                              firestoreService.restarVoto(doc.id, votos);
+                              _firestore.restarVoto(doc.id, votos);
                             },
                           ),
                         ],
@@ -71,7 +84,7 @@ class VotacionesPage extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            },
           );
         },
       ),
